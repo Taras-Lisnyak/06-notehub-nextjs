@@ -1,38 +1,65 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { useParams } from "next/navigation";
+import { HydrationBoundary, QueryClientProvider, useQuery, DehydratedState } from "@tanstack/react-query";
 import { fetchNoteById } from "../../../lib/api";
+import { useMemo } from "react";
+import { QueryClient } from "@tanstack/react-query";
 import css from "./NoteDetails.module.css";
+import Link from "next/link";
 
-export default function NoteDetailsClient() {
-  const params = useParams();
-  const id = params?.id as string;
+interface NoteDetailsClientProps {
+  id: string;
+  dehydratedState: DehydratedState;
+}
 
-  const { data: note, isLoading, isError } = useQuery({
+function NoteDetailsContent({ id }: { id: string }) {
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ["note", id],
     queryFn: () => fetchNoteById(id),
   });
 
-  if (isLoading) {
-    return <p>Loading, please wait...</p>;
+  if (isLoading) return <p>Loading note...</p>;
+  if (isError) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("Error fetching note:", error);
+    return <p>Could not fetch the note. Error: {errorMessage}</p>;
   }
-
-  if (isError || !note) {
-    return <p>Something went wrong.</p>;
-  }
+  if (!data) return <p>Note not found.</p>;
 
   return (
-    <div className={css.container}>
-      <div className={css.item}>
-        <div className={css.header}>
-          <h2>{note.title}</h2>
-        </div>
-        <p className={css.tag}>{note.tag}</p>
-        <p className={css.content}>{note.content}</p>
-        <p className={css.date}>{note.createdAt}</p>
-      </div>
-    </div>
+    <article className={css.article}>
+      <Link href="/notes" className={css.backLink}>
+        ← Back to Notes
+      </Link>
+      <h1 className={css.title}>{data.title}</h1>
+      <p className={css.content}>{data.content}</p>
+      <span className={css.tag}>{data.tag}</span>
+    </article>
+  );
+}
+
+export default function NoteDetailsClient({
+  id,
+  dehydratedState,
+}: NoteDetailsClientProps) {
+  const queryClient = useMemo(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 60 * 1000,
+          },
+        },
+      }),
+    []
+  );
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <HydrationBoundary state={dehydratedState}>
+        <NoteDetailsContent id={id} />
+      </HydrationBoundary>
+    </QueryClientProvider>
   );
 }
 

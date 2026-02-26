@@ -1,9 +1,4 @@
-import {
-  QueryClient,
-  dehydrate,
-  type DehydratedState,
-} from "@tanstack/react-query";
-import { ReactQueryStreamedHydration } from "@tanstack/react-query-next-experimental";
+import { QueryClient, dehydrate } from "@tanstack/react-query";
 import { fetchNotes } from "../../lib/api";
 import NotesClient from "./Notes.client";
 import css from "./NotesPage.module.css";
@@ -16,14 +11,12 @@ export default async function NotesPage() {
     queryFn: () => fetchNotes(1, 12, ""),
   });
 
-  // ✅ Явно приводимо до типу DehydratedState | undefined
-  const dehydratedState: DehydratedState | undefined = dehydrate(queryClient);
+  const dehydratedState = dehydrate(queryClient);
 
   return (
     <main className={css.container}>
-      <ReactQueryStreamedHydration state={dehydratedState}>
-        <NotesClient />
-      </ReactQueryStreamedHydration>
+      {/* ✅ Передаємо dehydratedState у клієнтський компонент */}
+      <NotesClient dehydratedState={dehydratedState} />
     </main>
   );
 }

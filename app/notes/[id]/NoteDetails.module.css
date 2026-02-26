@@ -11,24 +11,31 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-.item {
+.article {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #ddd;
-  padding-bottom: 8px;
+.backLink {
+  font-size: 14px;
+  color: #0d6efd;
+  text-decoration: none;
+  margin-bottom: 8px;
+  transition: color 0.2s ease;
 }
 
-.header h2 {
+.backLink:hover {
+  color: #0b5ed7;
+  text-decoration: underline;
+}
+
+.title {
   margin: 0;
   font-size: 28px;
   color: #333;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #ddd;
 }
 
 .content {

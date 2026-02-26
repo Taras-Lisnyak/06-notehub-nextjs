@@ -1,62 +1,72 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useDebouncedCallback } from "use-debounce";
+import { HydrationBoundary, QueryClientProvider, useQuery, DehydratedState } from "@tanstack/react-query";
 import { fetchNotes } from "../../lib/api";
-import Loader from "../../components/Loader/Loader";
-import ErrorMessage from "../../components/ErrorMessage/ErrorMessage";
+import { useMemo, useState } from "react";
+import { QueryClient } from "@tanstack/react-query";
 import NoteList from "../../components/NoteList/NoteList";
-import Pagination from "../../components/Pagination/Pagination";
-import SearchBox from "../../components/SearchBox/SearchBox";
 import Modal from "../../components/Modal/Modal";
 import NoteForm from "../../components/NoteForm/NoteForm";
 import css from "./NotesPage.module.css";
 
-export default function NotesClient() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const perPage = 12;
+interface NotesClientProps {
+  dehydratedState: DehydratedState;
+}
 
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["notes", page, search],
-    queryFn: () => fetchNotes(page, perPage, search),
-    placeholderData: (prev) => prev,
+function NotesContent() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["notes", 1, ""],
+    queryFn: () => fetchNotes(1, 12, ""),
   });
 
-  const debouncedSearch = useDebouncedCallback((value: string) => {
-    setSearch(value);
-    setPage(1);
-  }, 500);
+  if (isLoading) return <p>Loading notes...</p>;
+  if (isError) return <p>Could not fetch the list of notes.</p>;
+  if (!data || !data.notes || data.notes.length === 0) {
+    return <p>No notes found.</p>;
+  }
 
   return (
-    <div className={css.app}>
-      <header className={css.toolbar}>
-        <SearchBox onSearch={debouncedSearch} />
-        {data && data.totalPages > 1 && (
-          <Pagination
-            pageCount={data.totalPages}
-            currentPage={page}
-            onPageChange={setPage}
-          />
-        )}
-        <button className={css.button} onClick={() => setIsModalOpen(true)}>
-          Create note +
+    <>
+      <div className={css.toolbar}>
+        <h1>Notes</h1>
+        <button
+          className={css.button}
+          onClick={() => setIsModalOpen(true)}
+        >
+          + Create Note
         </button>
-      </header>
-
-      {isLoading && <Loader />}
-      {isError && <ErrorMessage message={error?.message || "Error loading notes"} />}
-
-      {data && data.notes.length > 0 && <NoteList notes={data.notes} />}
-
+      </div>
       {isModalOpen && (
         <Modal onClose={() => setIsModalOpen(false)}>
           <NoteForm onCancel={() => setIsModalOpen(false)} />
         </Modal>
       )}
-    </div>
+      <NoteList notes={data.notes} />
+    </>
+  );
+}
+
+export default function NotesClient({ dehydratedState }: NotesClientProps) {
+  const queryClient = useMemo(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 60 * 1000,
+          },
+        },
+      }),
+    []
+  );
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <HydrationBoundary state={dehydratedState}>
+        <NotesContent />
+      </HydrationBoundary>
+    </QueryClientProvider>
   );
 }
 

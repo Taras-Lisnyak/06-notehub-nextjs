@@ -44,7 +44,14 @@ export const deleteNote = async (id: string): Promise<Note> => {
 };
 
 export const fetchNoteById = async (id: string): Promise<Note> => {
-  const response: AxiosResponse<Note> = await instance.get(`/${id}`);
-  return response.data;
+  try {
+    console.log(`Fetching note with ID: ${id}`);
+    const response: AxiosResponse<Note> = await instance.get(`/${id}`);
+    console.log("Note fetched successfully:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching note ${id}:`, error);
+    throw error;
+  }
 };
 
