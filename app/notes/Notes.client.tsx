@@ -2,6 +2,7 @@
 
 import { hydrate, QueryClientProvider, useQuery, DehydratedState } from "@tanstack/react-query";
 import { fetchNotes } from "../../lib/api";
+import type { FetchNotesResponse } from "../../types/fetchNotesResponse";
 import { useMemo, useState, useEffect } from "react";
 import { QueryClient } from "@tanstack/react-query";
 import NoteList from "../../components/NoteList/NoteList";
@@ -31,10 +32,18 @@ function NotesContent() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["notes", currentPage, debouncedSearch],
-    queryFn: () => fetchNotes(currentPage, 12, debouncedSearch),
-  });
+  const {
+    data,
+    isLoading,
+    isError,
+  } = useQuery<FetchNotesResponse>(
+    {
+      queryKey: ["notes", currentPage, debouncedSearch],
+      queryFn: () => fetchNotes(currentPage, 12, debouncedSearch),
+      // keep last data visible until the new page arrives
+      keepPreviousData: true,
+    } as import("@tanstack/react-query").UseQueryOptions<FetchNotesResponse>
+  );
 
   if (isLoading) return <p>Loading notes...</p>;
   if (isError) return <p>Could not fetch the list of notes.</p>;
@@ -67,11 +76,13 @@ function NotesContent() {
           <SearchBox value={searchInput} onSearch={handleSearch} />
         </div>
         <div className={css.controlsCenter}>
-          <Pagination
-            pageCount={data.totalPages}
-            currentPage={currentPage}
-            onPageChange={handlePageChange}
-          />
+          {data.totalPages > 1 && (
+            <Pagination
+              pageCount={data.totalPages}
+              currentPage={currentPage}
+              onPageChange={handlePageChange}
+            />
+          )}
         </div>
         <div className={css.controlsRight} />
       </div>
@@ -98,8 +109,10 @@ export default function NotesClient({ dehydratedState }: NotesClientProps) {
     []
   );
   // hydrate client QueryClient with server state
-  useMemo(() => {
-    if (dehydratedState) hydrate(queryClient, dehydratedState);
+  useEffect(() => {
+    if (dehydratedState) {
+      hydrate(queryClient, dehydratedState);
+    }
   }, [queryClient, dehydratedState]);
 
   return (

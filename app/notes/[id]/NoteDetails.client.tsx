@@ -1,6 +1,7 @@
 "use client";
 
-import { hydrate, QueryClientProvider, useQuery, DehydratedState } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
+import type { Note } from "../../../types/note";
 import { fetchNoteById } from "../../../lib/api";
 import { useMemo } from "react";
 import { QueryClient } from "@tanstack/react-query";
@@ -9,14 +10,16 @@ import Link from "next/link";
 
 interface NoteDetailsClientProps {
   id: string;
-  dehydratedState: DehydratedState;
 }
 
 function NoteDetailsContent({ id }: { id: string }) {
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["note", id],
-    queryFn: () => fetchNoteById(id),
-  });
+  const { data, isLoading, isError, error } = useQuery<Note>(
+    {
+      queryKey: ["note", id],
+      queryFn: () => fetchNoteById(id),
+      refetchOnMount: false, // avoid redundant fetch when component mounts
+    } as import("@tanstack/react-query").UseQueryOptions<Note>
+  );
 
   if (isLoading) return <p>Loading note...</p>;
   if (isError) {
@@ -40,7 +43,6 @@ function NoteDetailsContent({ id }: { id: string }) {
 
 export default function NoteDetailsClient({
   id,
-  dehydratedState,
 }: NoteDetailsClientProps) {
   const queryClient = useMemo(
     () =>
@@ -53,10 +55,6 @@ export default function NoteDetailsClient({
       }),
     []
   );
-
-  useMemo(() => {
-    if (dehydratedState) hydrate(queryClient, dehydratedState);
-  }, [queryClient, dehydratedState]);
 
   return (
     <QueryClientProvider client={queryClient}>
