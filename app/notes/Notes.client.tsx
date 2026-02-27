@@ -1,12 +1,14 @@
 "use client";
 
-import { HydrationBoundary, QueryClientProvider, useQuery, DehydratedState } from "@tanstack/react-query";
+import { hydrate, QueryClientProvider, useQuery, DehydratedState } from "@tanstack/react-query";
 import { fetchNotes } from "../../lib/api";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { QueryClient } from "@tanstack/react-query";
 import NoteList from "../../components/NoteList/NoteList";
 import Modal from "../../components/Modal/Modal";
 import NoteForm from "../../components/NoteForm/NoteForm";
+import Pagination from "../../components/Pagination/Pagination";
+import SearchBox from "../../components/SearchBox/SearchBox";
 import css from "./NotesPage.module.css";
 
 interface NotesClientProps {
@@ -15,10 +17,23 @@ interface NotesClientProps {
 
 function NotesContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+      setCurrentPage(1);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["notes", 1, ""],
-    queryFn: () => fetchNotes(1, 12, ""),
+    queryKey: ["notes", currentPage, debouncedSearch],
+    queryFn: () => fetchNotes(currentPage, 12, debouncedSearch),
   });
 
   if (isLoading) return <p>Loading notes...</p>;
@@ -26,6 +41,15 @@ function NotesContent() {
   if (!data || !data.notes || data.notes.length === 0) {
     return <p>No notes found.</p>;
   }
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleSearch = (value: string) => {
+    setSearchInput(value);
+  };
 
   return (
     <>
@@ -37,6 +61,19 @@ function NotesContent() {
         >
           + Create Note
         </button>
+      </div>
+      <div className={css.controls}>
+        <div className={css.controlsLeft}>
+          <SearchBox value={searchInput} onSearch={handleSearch} />
+        </div>
+        <div className={css.controlsCenter}>
+          <Pagination
+            pageCount={data.totalPages}
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+          />
+        </div>
+        <div className={css.controlsRight} />
       </div>
       {isModalOpen && (
         <Modal onClose={() => setIsModalOpen(false)}>
@@ -60,12 +97,14 @@ export default function NotesClient({ dehydratedState }: NotesClientProps) {
       }),
     []
   );
+  // hydrate client QueryClient with server state
+  useMemo(() => {
+    if (dehydratedState) hydrate(queryClient, dehydratedState);
+  }, [queryClient, dehydratedState]);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <HydrationBoundary state={dehydratedState}>
-        <NotesContent />
-      </HydrationBoundary>
+      <NotesContent />
     </QueryClientProvider>
   );
 }

@@ -24,8 +24,12 @@ export default function NoteForm({ onCancel }: NoteFormProps) {
   const mutation = useMutation({
     mutationFn: createNote,
     onSuccess: () => {
+      console.log("Note created, invalidating queries...");
       queryClient.invalidateQueries({ queryKey: ["notes"] });
       onCancel(); // закриваємо модалку після успіху
+    },
+    onError: (error) => {
+      console.error("Failed to create note:", error);
     },
   });
 
@@ -33,9 +37,9 @@ export default function NoteForm({ onCancel }: NoteFormProps) {
     <Formik
       initialValues={{ title: "", content: "", tag: "" }}
       validationSchema={validationSchema}
-      onSubmit={(values, { resetForm }) => {
+      onSubmit={(values) => {
+        console.log("Submitting form with values:", values);
         mutation.mutate(values);
-        resetForm();
       }}
     >
       {({ isSubmitting }) => (

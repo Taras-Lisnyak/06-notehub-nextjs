@@ -34,8 +34,15 @@ export const fetchNotes = async (
 export const createNote = async (
   note: CreateNoteParams
 ): Promise<Note> => {
-  const response: AxiosResponse<Note> = await instance.post("", note);
-  return response.data;
+  try {
+    console.log("Creating note:", note);
+    const response: AxiosResponse<Note> = await instance.post("", note);
+    console.log("Note created successfully:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Error creating note:", error);
+    throw error;
+  }
 };
 
 export const deleteNote = async (id: string): Promise<Note> => {
