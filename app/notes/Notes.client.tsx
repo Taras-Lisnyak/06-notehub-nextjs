@@ -1,10 +1,9 @@
 "use client";
 
-import { hydrate, QueryClientProvider, useQuery, DehydratedState } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { fetchNotes } from "../../lib/api";
 import type { FetchNotesResponse } from "../../types/fetchNotesResponse";
-import { useMemo, useState, useEffect } from "react";
-import { QueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import NoteList from "../../components/NoteList/NoteList";
 import Modal from "../../components/Modal/Modal";
 import NoteForm from "../../components/NoteForm/NoteForm";
@@ -12,11 +11,7 @@ import Pagination from "../../components/Pagination/Pagination";
 import SearchBox from "../../components/SearchBox/SearchBox";
 import css from "./NotesPage.module.css";
 
-interface NotesClientProps {
-  dehydratedState: DehydratedState;
-}
-
-function NotesContent() {
+export default function NotesContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
@@ -40,8 +35,7 @@ function NotesContent() {
     {
       queryKey: ["notes", currentPage, debouncedSearch],
       queryFn: () => fetchNotes(currentPage, 12, debouncedSearch),
-      // keep last data visible until the new page arrives
-      keepPreviousData: true,
+      placeholderData: keepPreviousData,
     } as import("@tanstack/react-query").UseQueryOptions<FetchNotesResponse>
   );
 
@@ -93,32 +87,6 @@ function NotesContent() {
       )}
       <NoteList notes={data.notes} />
     </>
-  );
-}
-
-export default function NotesClient({ dehydratedState }: NotesClientProps) {
-  const queryClient = useMemo(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            staleTime: 60 * 1000,
-          },
-        },
-      }),
-    []
-  );
-  // hydrate client QueryClient with server state
-  useEffect(() => {
-    if (dehydratedState) {
-      hydrate(queryClient, dehydratedState);
-    }
-  }, [queryClient, dehydratedState]);
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      <NotesContent />
-    </QueryClientProvider>
   );
 }
 

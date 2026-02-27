@@ -1,10 +1,8 @@
 "use client";
 
-import { QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import type { Note } from "../../../types/note";
 import { fetchNoteById } from "../../../lib/api";
-import { useMemo } from "react";
-import { QueryClient } from "@tanstack/react-query";
 import css from "./NoteDetails.module.css";
 import Link from "next/link";
 
@@ -12,7 +10,7 @@ interface NoteDetailsClientProps {
   id: string;
 }
 
-function NoteDetailsContent({ id }: { id: string }) {
+export default function NoteDetailsClient({ id }: NoteDetailsClientProps) {
   const { data, isLoading, isError, error } = useQuery<Note>(
     {
       queryKey: ["note", id],
@@ -38,28 +36,6 @@ function NoteDetailsContent({ id }: { id: string }) {
       <p className={css.content}>{data.content}</p>
       <span className={css.tag}>{data.tag}</span>
     </article>
-  );
-}
-
-export default function NoteDetailsClient({
-  id,
-}: NoteDetailsClientProps) {
-  const queryClient = useMemo(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            staleTime: 60 * 1000,
-          },
-        },
-      }),
-    []
-  );
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      <NoteDetailsContent id={id} />
-    </QueryClientProvider>
   );
 }
 
